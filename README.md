@@ -6,3 +6,11 @@ COMP4447 Data Science Tools 1 Final Project
 Project Members:
 - Jimmy Zhang
 - Max Condong
+
+## Objective
+
+## Analysis Summary
+
+## Project Directory
+
+## References
