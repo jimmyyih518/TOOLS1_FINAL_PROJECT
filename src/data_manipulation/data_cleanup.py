@@ -9,22 +9,18 @@ import json
 import re
 
 """
-NOTES:
->>DONE calculate price/sqft
->>DONE remove rows where any(price,bedrooms,bath) is none
->>add include/exclude observation flag
+Data cleanup process:
+    1.Read JSON file and convert to dataframe
+    2.Remove unwanted columns
+    3.Process columns
 """
 
 ## Turn off panda warnings
 pd.set_option('mode.chained_assignment', None)
 
-
-def clean_json(json_file):
-    ## Option2: using json_normalize
-    with open(json_file,'r') as f:
-        data = json.loads(f.read())    
+def clean_data(list1):    
     
-    data_df = pd.json_normalize(data)
+    data_df = pd.json_normalize(list1)
     
     ## List of columns to keep
     columns = ['buildingId','lotId','price','minBeds','minBaths','minArea','unitCount','isBuilding','address'
@@ -32,23 +28,22 @@ def clean_json(json_file):
                ,'hdpData.homeInfo.city','hdpData.homeInfo.state','hdpData.homeInfo.latitude','hdpData.homeInfo.longitude'
                ,'hdpData.homeInfo.price','hdpData.homeInfo.bathrooms','hdpData.homeInfo.bedrooms','hdpData.homeInfo.livingArea'
                ,'hdpData.homeInfo.homeType','hdpData.homeInfo.homeStatus','hdpData.homeInfo.daysOnZillow'
-               ,'additional_details.details','statusType','listingType','hasAdditionalAttributions']
-    
-    ## Create a new dataframe with columns indicated above
+               ,'additional_details.details','statusType','listingType','hasAdditionalAttributions','distance_to_waterfront']
+
+    ## Create a new dataframe that includes the columns indicated above
     data_df2 = data_df[columns]
     
-    #data_df2.rename(columns = {'additional_details.summary':'additional_details_summary'}, inplace = True)
+    data_df2['additional_details.details'] = data_df2['additional_details.details'].fillna('NA')
     
+   
     ## Clean up price
     data_df2['price_final'] = data_df2['price'].apply(lambda x: proc_price(x))
     
     data_df2['bedroom_final'] = np.where(data_df2['hdpData.homeInfo.bedrooms'].isnull()
                                               ,data_df2['beds'],data_df2['hdpData.homeInfo.bedrooms'])
+    
     data_df2['bathroom_final'] = np.where(data_df2['hdpData.homeInfo.bathrooms'].isnull()
                                                ,data_df2['baths'],data_df2['hdpData.homeInfo.bathrooms'])
-    
-    data_df2['has_garage_final'] = 0 # placeholder to indicate if garage is available
-    data_df2['has_parking_final'] = 0 # placeholder to indicate if parking is available
     
     data_df2['sqft_final'] = np.where(data_df2['area'].isnull()
                                               ,data_df2['hdpData.homeInfo.livingArea'],data_df2['area'])
@@ -60,18 +55,49 @@ def clean_json(json_file):
     data_df2['long_final'] = np.where(data_df2['latLong.longitude'].isnull()
                                      ,data_df2['hdpData.homeInfo.longitude'],data_df2['latLong.longitude'])
     
+    data_df2['homeType_final'] = data_df2['hdpData.homeInfo.homeType']
+    data_df2['homeStatus_final'] = data_df2['hdpData.homeInfo.homeStatus']
 
-    columns = ['price_final','bedroom_final','bathroom_final','has_garage_final'
-               ,'has_parking_final','sqft_final','city_final','state_final'
-               ,'lat_final','long_final'
+    data_df2['distance_to_waterfront_final'] = data_df2['distance_to_waterfront']
+
+    data_df2['additional_info'] = data_df2['additional_details.details'].apply(lambda x:parse_data(x))        
+
+    
+    data_df2 = pd.concat([data_df2, data_df2["additional_info"].apply(pd.Series)], axis=1)
+
+    data_df2['garage_stalls'] = data_df2['garage_stalls'].fillna(0)
+    data_df2['features'] = data_df2['features'].fillna('NA')
+    data_df2['ind_HasPool'] = data_df2['features'].str.lower().str.contains('pool')
+    data_df2['ind_GolfCourseNearby'] = data_df2['features'].str.lower().str.contains('golf')
+    data_df2['ind_ShoppingNearby'] = data_df2['features'].str.lower().str.contains('shopping')
+    data_df2['ind_Clubhouse'] = data_df2['features'].str.lower().str.contains('clubhouse')
+    data_df2['ind_RecreationNearby'] = data_df2['features'].str.lower().str.contains('recreation')
+    data_df2['ind_ParkNearby'] = data_df2['features'].str.lower().str.contains('park nearby')
+    data_df2['ind_IsCornerLot'] = data_df2['features'].str.lower().str.contains('corner lot')
+    data_df2['ind_IsCuldesac'] = data_df2['features'].str.lower().str.contains('cul-de-sac')
+
+    
+    #data_df2.to_csv('data_df2.csv') # For testing only
+
+    columns = ['price_final','bedroom_final','bathroom_final','sqft_final','city_final','state_final'
+               ,'lat_final','long_final','homeType_final','homeStatus_final'
+               ,'distance_to_waterfront_final'
+               ,'additional_info'
+               ,'garage_stalls','features'
+               ,'ind_HasPool','ind_GolfCourseNearby','ind_ShoppingNearby','ind_Clubhouse','ind_RecreationNearby'
+               ,'ind_ParkNearby','ind_IsCornerLot','ind_IsCuldesac'
                ]    
     
     ## Rename columns
     df_final = data_df2[columns]
     dict = {'price_final':'price','bedroom_final':'bedrooms','bathroom_final':'bathrooms'
-               ,'has_garage_final':'has_garage','has_parking_final':'has_parking','sqft_final':'sqft'
+               ,'sqft_final':'sqft'
                ,'city_final':'city','state_final':'state','lat_final':'latitude','long_final':'longitude'
-               }
+               ,'homeType_final':'homeType','homeStatus_final':'homeStatus'
+               ,'distance_to_waterfront_final':'distance_to_waterfront'
+               ,'garage_stalls':'ind_HasGarage'
+               }               
+
     df_final.rename(columns=dict,inplace=True)
     
     ## Remove rows with missing values in any column
@@ -81,10 +107,6 @@ def clean_json(json_file):
     ## Additional calculation
     df_final['price/sqft'] = df_final['price'] / df_final['sqft']
     
-    #print(df_final)
-    
-    ## Export to csv
-    df_final.to_csv('zillow_data.csv')
     return df_final
 
 def remove_special_characters(string):
@@ -98,15 +120,35 @@ def return_numeric(expr):
 def proc_price(raw_input):
     return return_numeric(raw_input)
 
-def proc_garage(raw_input):
-    raw_input = remove_special_characters(raw_input)
-    if raw_input.find('garage') != -1:
-        return 1
+def parse_data(data):
+    # Extract the number of garage stalls
+    garage_stalls = re.search(r"Garage spaces: (\d+)", data)
+    if garage_stalls:
+        garage_stalls = int(garage_stalls.group(1))
     else:
-        return 0
+        garage_stalls = None
 
+    # Extract everything between "features: " to "Other property information"
+    features = re.search(r"Lot features: (.*?)Other property information", data, re.DOTALL)
+    if features:
+        features = features.group(1)
+    else:
+        features = None
 
-if __name__ == '__main__'    :
+    return {
+        "garage_stalls": garage_stalls,
+        "features": features,
+    }
+
+def runTest():
+    file = 'zillow_all_listings_scraped.json'
+    with open(file,'r') as f:
+        data = json.loads(f.read())        
+
+    df = clean_data(data)     
+    df.to_csv('zillow_data_clean.csv')
     
-    clean_json('zillow_listing_data_CA_BC.json')
+    #print(df.dtypes)
+##---------------------------------------------------------------------------##
+runTest()
     
