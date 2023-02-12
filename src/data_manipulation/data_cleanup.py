@@ -18,7 +18,13 @@ Data cleanup process:
 ## Turn off panda warnings
 pd.set_option('mode.chained_assignment', None)
 
+def clean_json_file(filename):
+    with open(filename,'r') as f:
+        data = json.loads(f.read()) 
+    return clean_data(data)
+
 def clean_data(list1):    
+
     
     data_df = pd.json_normalize(list1)
     
@@ -142,13 +148,15 @@ def parse_data(data):
 
 def runTest():
     file = 'zillow_all_listings_scraped.json'
-    with open(file,'r') as f:
-        data = json.loads(f.read())        
+    # with open(file,'r') as f:
+    #     data = json.loads(f.read())        
 
-    df = clean_data(data)     
-    df.to_csv('zillow_data_clean.csv')
-    
+    df = clean_json_file(file)     
     #print(df.dtypes)
+    
+    print(df.head())
+    #df.to_csv('zillow_data_clean.csv')
+    
+    
 ##---------------------------------------------------------------------------##
 runTest()
-    
