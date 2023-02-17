@@ -147,7 +147,7 @@ def parse_data(data):
     }
 
 def runTest():
-    file = 'zillow_all_listings_scraped.json'
+    file = './data/zillow_all_listings_scraped.json'
     # with open(file,'r') as f:
     #     data = json.loads(f.read())        
 
