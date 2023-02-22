@@ -34,7 +34,8 @@ def clean_data(list1):
                ,'hdpData.homeInfo.city','hdpData.homeInfo.state','hdpData.homeInfo.latitude','hdpData.homeInfo.longitude'
                ,'hdpData.homeInfo.price','hdpData.homeInfo.bathrooms','hdpData.homeInfo.bedrooms','hdpData.homeInfo.livingArea'
                ,'hdpData.homeInfo.homeType','hdpData.homeInfo.homeStatus','hdpData.homeInfo.daysOnZillow'
-               ,'additional_details.details','statusType','listingType','hasAdditionalAttributions','distance_to_waterfront']
+               ,'additional_details.details','statusType','listingType','hasAdditionalAttributions','distance_to_waterfront'
+               ,'query_city']
 
     ## Create a new dataframe that includes the columns indicated above
     data_df2 = data_df[columns]
@@ -43,7 +44,9 @@ def clean_data(list1):
     
    
     ## Clean up price
-    data_df2['price_final'] = data_df2['price'].apply(lambda x: proc_price(x))
+    #data_df2['price_final'] = data_df2['price'].apply(lambda x: proc_price(x)) # Moving this step to the notebook
+    
+    data_df2['price_final'] = data_df2['price']
     
     data_df2['bedroom_final'] = np.where(data_df2['hdpData.homeInfo.bedrooms'].isnull()
                                               ,data_df2['beds'],data_df2['hdpData.homeInfo.bedrooms'])
@@ -54,6 +57,9 @@ def clean_data(list1):
     data_df2['sqft_final'] = np.where(data_df2['area'].isnull()
                                               ,data_df2['hdpData.homeInfo.livingArea'],data_df2['area'])
     
+
+
+
     data_df2['city_final'] = data_df2['hdpData.homeInfo.city']
     data_df2['state_final'] = data_df2['hdpData.homeInfo.state']
     data_df2['lat_final'] = np.where(data_df2['latLong.latitude'].isnull()
@@ -82,6 +88,8 @@ def clean_data(list1):
     data_df2['ind_IsCornerLot'] = data_df2['features'].str.lower().str.contains('corner lot')
     data_df2['ind_IsCuldesac'] = data_df2['features'].str.lower().str.contains('cul-de-sac')
 
+
+    data_df2['overview'] = data_df2['additional_details.details'] # Added this step to display on the notebook
     
     #data_df2.to_csv('data_df2.csv') # For testing only
 
@@ -92,6 +100,7 @@ def clean_data(list1):
                ,'garage_stalls','features'
                ,'ind_HasPool','ind_GolfCourseNearby','ind_ShoppingNearby','ind_Clubhouse','ind_RecreationNearby'
                ,'ind_ParkNearby','ind_IsCornerLot','ind_IsCuldesac'
+               ,'overview','query_city'
                ]    
     
     ## Rename columns
@@ -110,8 +119,16 @@ def clean_data(list1):
     df_final.replace('', np.nan, inplace=True)
     df_final.dropna(inplace=True)
     
+
+    ## Additional cleanup    
+    df_final = df_final[df_final['sqft'] > 0]
+    df_final = df_final[df_final['state'] != 'WA']
+
     ## Additional calculation
-    df_final['price/sqft'] = df_final['price'] / df_final['sqft']
+    #df_final['price/sqft'] = df_final['price'] / df_final['sqft'] # Moving this step to the notebook
+
+    ## Replace inf values with 0
+    df_final.replace([np.inf,-np.inf],0,inplace=True)
     
     return df_final
 
@@ -147,7 +164,7 @@ def parse_data(data):
     }
 
 def runTest():
-    file = './data/zillow_all_listings_scraped.json'
+    file = 'zillow_all_listings_scraped.json'
     # with open(file,'r') as f:
     #     data = json.loads(f.read())        
 
@@ -156,7 +173,23 @@ def runTest():
     
     print(df.head())
     #df.to_csv('zillow_data_clean.csv')
+    return df
     
-    
+def removeOutliers(data, col):
+    Q3 = np.quantile(data[col], 0.90)
+    Q1 = np.quantile(data[col], 0.10)
+    IQR = Q3 - Q1
+ 
+    #print("IQR value for column %s is: %s" % (col, IQR))
+    global outlier_free_list
+    #global filtered_data
+ 
+    lower_range = Q1 - 1.5 * IQR
+    upper_range = Q3 + 1.5 * IQR
+    outlier_free_list = [x for x in data[col] if (
+        (x > lower_range) & (x < upper_range))]
+    filtered_data = data.loc[data[col].isin(outlier_free_list)]    
+    return filtered_data
 ##---------------------------------------------------------------------------##
-runTest()
+#df = runTest()
+#df.to_csv('df_test.csv')
