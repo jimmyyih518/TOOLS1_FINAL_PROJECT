@@ -63,3 +63,12 @@ def point_to_line_dist(point, line):
     distance_km = distance * 111.32
     
     return distance_km
+
+def euclid_dist(p1, p2):
+    point1 = Point(p1[0], p1[1])
+    point2 = Point(p2[0], p2[1])
+    
+    distance = point1.distance(point2)
+    distance_km = distance * 111.32
+    
+    return distance_km

@@ -7,6 +7,7 @@ Created on Sat Jan 28 21:09:03 2023
 import pandas as pd, numpy as np
 import json
 import re
+from src.data_manipulation.utils import *
 
 """
 Data cleanup process:
@@ -35,7 +36,7 @@ def clean_data(list1):
                ,'hdpData.homeInfo.price','hdpData.homeInfo.bathrooms','hdpData.homeInfo.bedrooms','hdpData.homeInfo.livingArea'
                ,'hdpData.homeInfo.homeType','hdpData.homeInfo.homeStatus','hdpData.homeInfo.daysOnZillow'
                ,'additional_details.details','statusType','listingType','hasAdditionalAttributions','distance_to_waterfront'
-               ,'query_city']
+               ,'query_city', 'distance_to_city_center']
 
     ## Create a new dataframe that includes the columns indicated above
     data_df2 = data_df[columns]
@@ -100,7 +101,7 @@ def clean_data(list1):
                ,'garage_stalls','features'
                ,'ind_HasPool','ind_GolfCourseNearby','ind_ShoppingNearby','ind_Clubhouse','ind_RecreationNearby'
                ,'ind_ParkNearby','ind_IsCornerLot','ind_IsCuldesac'
-               ,'overview','query_city'
+               ,'overview','query_city','distance_to_city_center'
                ]    
     
     ## Rename columns
@@ -121,14 +122,22 @@ def clean_data(list1):
     
 
     ## Additional cleanup    
-    df_final = df_final[df_final['sqft'] > 0]
+    df_final = df_final[df_final['sqft'] > 300]
     df_final = df_final[df_final['state'] != 'WA']
+    df_final = df_final[(df_final['ind_HasGarage'] < 8 ) & 
+            (df_final['sqft'] < 10000 ) & 
+            (df_final['sqft'] > 300) & 
+            (df_final['bedrooms'] < 12 ) & 
+            (df_final['bathrooms'] < 12 ) &
+            (df_final['homeStatus'] == 'FOR_SALE') &
+            (df_final['state'].isin(['BC', 'CA']))          
+                       ]
 
     ## Additional calculation
     #df_final['price/sqft'] = df_final['price'] / df_final['sqft'] # Moving this step to the notebook
 
     ## Replace inf values with 0
-    df_final.replace([np.inf,-np.inf],0,inplace=True)
+    #df_final.replace([np.inf,-np.inf],0,inplace=True)
     
     return df_final
 
