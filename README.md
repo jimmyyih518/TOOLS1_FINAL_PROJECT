@@ -20,6 +20,10 @@ The data collected suffered from duplicate columns and rows, erroneous data form
 issues and to transform key attributes.
 
 ## Project Directory
+- [Webscraper Code](https://github.com/jimmyyih518/TOOLS1_FINAL_PROJECT/tree/main/src/webscraper)
+- [Data Manipulation Code](https://github.com/jimmyyih518/TOOLS1_FINAL_PROJECT/tree/main/src/data_manipulation)
+- [Scraped Data from Zillow](https://github.com/jimmyyih518/TOOLS1_FINAL_PROJECT/blob/main/data/zillow_all_listings_scraped.json)
+- [Final Notebook](https://github.com/jimmyyih518/TOOLS1_FINAL_PROJECT/blob/main/Final_Notebook.ipynb)
 
 ## References
 Data Analysis: predicting the housing market using Python, W.Weldon, Mar 2019, reference link
